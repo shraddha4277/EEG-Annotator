@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EEG Annotator — Professional EEG Workstation</title>
+  <meta name="description" content="Browser-based EEG annotation workstation: visualize EDF signals, run PSD analysis, and export annotated EDF+ files.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ TOOLBAR ══ -->
+  <header id="toolbar">
+    <div class="toolbar-left">
+      <!-- Logo -->
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M2 12 Q4 5,6 12 Q8 19,10 12 Q12 5,14 12 Q16 19,18 12 Q20 5,22 12"
+                stroke="#4f9cff" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">EEG<span class="logo-accent">Annotator</span></span>
+      </div>
+      <div class="toolbar-divider"></div>
+
+      <!-- Open EDF -->
+      <button id="btn-open-edf" class="btn btn-primary">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="12" y1="18" x2="12" y2="12"/>
+          <line x1="9" y1="15" x2="15" y2="15"/>
+        </svg>
+        Open EDF
+      </button>
+
+      <!-- Montage toggle (hidden until file loaded) -->
+      <div class="toolbar-divider" id="div-montage" style="display:none"></div>
+      <div class="montage-group" id="montage-group" style="display:none">
+        <span class="label-small">Montage</span>
+        <div class="toggle-group">
+          <button id="btn-raw"     class="toggle-btn active" data-montage="raw">Raw</button>
+          <button id="btn-bipolar" class="toggle-btn"        data-montage="bipolar">Bipolar</button>
+        </div>
+      </div>
+
+      <!-- EDA button -->
+      <div class="toolbar-divider" style="display:none" id="div-eda"></div>
+      <button id="btn-eda" class="btn btn-secondary" style="display:none" title="Exploratory Data Analysis">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+        EDA
+      </button>
+    </div>
+
+    <!-- Center: filename -->
+    <div class="toolbar-center">
+      <span id="file-title" class="file-title-text">No file loaded — Open an EDF file to begin</span>
+    </div>
+
+    <div class="toolbar-right">
+      <!-- Theme toggle -->
+      <button id="btn-theme-toggle" class="btn btn-secondary" title="Toggle Theme">
+        <svg id="icon-moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <svg id="icon-sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+
+      <!-- Annotate mode -->
+      <button id="btn-annotate-mode" class="btn btn-accent" style="display:none" title="Toggle annotation mode (A)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+        </svg>
+        Annotate
+      </button>
+
+      <div class="toolbar-divider" id="div-export" style="display:none"></div>
+
+      <!-- Export dropdown -->
+      <div class="dropdown" id="export-dropdown" style="display:none">
+        <button id="btn-export" class="btn btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Export
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div class="dropdown-menu" id="export-menu">
+          <button class="dropdown-item" id="export-csv">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            Annotations CSV
+          </button>
+          <button class="dropdown-item" id="export-edf">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <ellipse cx="12" cy="5" rx="9" ry="3"/>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+            </svg>
+            Annotated EDF+
+          </button>
+          <button class="dropdown-item" id="export-report">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <line x1="10" y1="9"  x2="8" y2="9"/>
+            </svg>
+            HTML Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══ MAIN LAYOUT ══ -->
+  <div id="main-layout">
+
+    <!-- ── Left sidebar ── -->
+    <aside id="sidebar-left">
+      <!-- File Info -->
+      <div class="panel" style="flex:0 0 auto; border-bottom:1px solid var(--border)">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          File Info
+        </div>
+        <div class="panel-body" id="info-content">
+          <div class="empty-state">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p>Open an EDF file</p>
+          </div>
+        </div>
+      </div>
+      <!-- Channels -->
+      <div class="panel" style="flex:1;min-height:0">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Channels
+          <span class="badge" id="channel-count">0</span>
+        </div>
+        <div class="panel-body" id="channel-list">
+          <div class="empty-state small"><p>No channels</p></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Viewer ── -->
+    <div id="viewer-area">
+      <!-- Empty / welcome -->
+      <div id="viewer-empty">
+        <div class="welcome-card">
+          <div class="welcome-icon">
+            <svg width="72" height="40" viewBox="0 0 72 40" fill="none">
+              <path d="M0 20 Q8 4,14 20 Q20 36,26 20 Q32 4,38 20 Q44 36,50 20 Q56 4,62 20 Q68 36,72 20"
+                    stroke="url(#wg)" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="wg" x1="0" y1="0" x2="72" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"   stop-color="#4f9cff"/>
+                  <stop offset="50%"  stop-color="#a78bfa"/>
+                  <stop offset="100%" stop-color="#00e5be"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <h1 class="welcome-title">EEG Annotator</h1>
+          <p class="welcome-subtitle">Professional EEG Annotation Workstation</p>
+          <button id="btn-open-edf-center" class="btn btn-primary btn-large">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            Open EDF File
+          </button>
+          <div class="welcome-features">
+            <div class="feature-item"><span class="feature-dot" style="background:#4f9cff"></span>Visualize multi-channel EEG signals</div>
+            <div class="feature-item"><span class="feature-dot" style="background:#00e5be"></span>PSD &amp; Band Power Analysis</div>
+            <div class="feature-item"><span class="feature-dot" style="background:#a78bfa"></span>Annotate &amp; Export EDF+ / CSV</div>
+          </div>
+          <p style="margin-top:24px;font-size:11px;color:var(--text-muted)">
+            Keyboard: ← → scroll &nbsp;|&nbsp; ↑ ↓ amplitude &nbsp;|&nbsp; + - zoom &nbsp;|&nbsp; A annotate
+          </p>
+        </div>
+      </div>
+
+      <!-- Waveform content (hidden until file loaded) -->
+      <div id="viewer-content" style="display:none">
+        <!-- Channel labels + canvas -->
+        <div id="waveform-wrapper">
+          <div id="channel-labels"></div>
+          <div id="canvas-stack">
+            <canvas id="waveform-canvas"></canvas>
+            <canvas id="overlay-canvas"></canvas>
+          </div>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap-container" title="Click to seek">
+          <canvas id="minimap-canvas"></canvas>
+        </div>
+
+        <!-- Bottom controls -->
+        <div id="bottom-controls">
+          <label class="control-label">
+            Window
+            <select id="window-size">
+              <option value="5">5 s</option>
+              <option value="10" selected>10 s</option>
+              <option value="20">20 s</option>
+              <option value="30">30 s</option>
+              <option value="60">60 s</option>
+            </select>
+          </label>
+          <label class="control-label">
+            Amplitude
+            <input id="amplitude-scale" type="range" min="0.1" max="8" step="0.05" value="1">
+          </label>
+          <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+            <button id="btn-prev" class="nav-btn" title="Previous window (←)">&#x2039;</button>
+            <button id="btn-next" class="nav-btn" title="Next window (→)">&#x203a;</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right sidebar: Annotations ── -->
+    <aside id="sidebar-right">
+      <div class="panel" style="flex:1;min-height:0">
+        <div class="panel-header">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+          Annotations
+          <span class="badge" id="annotation-count">0</span>
+        </div>
+        <div class="panel-body" id="annotation-list">
+          <div class="empty-state small">
+            <p>No annotations yet</p>
+            <p class="hint">Enable <strong>Annotate</strong> mode and drag on the waveform</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══ STATUS BAR ══ -->
+  <footer id="status-bar">
+    <span id="status-file">Ready</span>
+    <span class="status-divider">|</span>
+    <span id="status-cursor">—</span>
+    <span class="status-divider">|</span>
+    <span id="status-window">Window: —</span>
+    <span class="status-divider">|</span>
+    <span id="status-sr">SR: —</span>
+    <span class="status-divider">|</span>
+    <span id="status-duration">Duration: —</span>
+  </footer>
+
+  <!-- ══ HIDDEN FILE INPUT ══ -->
+  <input type="file" id="file-input" accept=".edf,.EDF" hidden>
+
+  <!-- ══ ANNOTATION MODAL ══ -->
+  <div id="modal-annotation" class="modal-overlay" style="display:none">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+          </svg>
+          New Annotation
+        </h3>
+        <button class="modal-close" id="ann-cancel">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Label <span class="required">*</span></label>
+          <input type="text" id="ann-label" placeholder="e.g. Spike, Artifact, Sleep Stage N2" autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label>Colour</label>
+          <div class="color-swatches" id="color-swatches"></div>
+        </div>
+        <div class="form-group">
+          <label>Time Range</label>
+          <div class="time-range-display">
+            <span id="ann-time-start">—</span>
+            <span class="time-arrow">→</span>
+            <span id="ann-time-end">—</span>
+            <span class="time-duration" id="ann-duration"></span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notes <span style="color:var(--text-muted);font-weight:400">(optional)</span></label>
+          <textarea id="ann-notes" placeholder="Any notes about this segment…" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" id="ann-cancel-btn">Cancel</button>
+        <button class="btn btn-primary" id="ann-save-btn">Save Annotation</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ EDA MODAL ══ -->
+  <div id="modal-eda" class="modal-overlay" style="display:none">
+    <div class="modal-card modal-large">
+      <div class="modal-header">
+        <h3>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" stroke-width="2">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+          Exploratory Data Analysis
+        </h3>
+        <button class="modal-close" id="eda-close">&#x2715;</button>
+      </div>
+      <div class="modal-body">
+        <div class="eda-controls">
+          <label class="control-label">
+            Channel
+            <select id="eda-channel-select" style="min-width:120px"></select>
+          </label>
+          <label class="control-label">
+            Segment
+            <select id="eda-window-select">
+              <option value="current" selected>Current view</option>
+              <option value="entire">Entire recording</option>
+            </select>
+          </label>
+          <button class="btn btn-primary btn-sm" id="eda-compute-btn">Compute</button>
+        </div>
+        <div class="eda-grid">
+          <div class="eda-card">
+            <h4>Power Spectral Density — Welch Method</h4>
+            <canvas id="eda-psd-canvas" style="width:100%;height:220px"></canvas>
+          </div>
+          <div class="eda-card">
+            <h4>Band Power Distribution</h4>
+            <canvas id="eda-bands-canvas" style="width:100%;height:140px"></canvas>
+            <table class="band-table">
+              <thead>
+                <tr>
+                  <th>Band</th><th>Range</th><th>Absolute</th><th>Relative</th>
+                </tr>
+              </thead>
+              <tbody id="band-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TOAST CONTAINER ══ -->
+  <div id="toast-container"></div>
+
+</div><!-- #app -->
+
+<!-- Scripts (order matters) -->
+<script src="js/edf-parser.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/eda.js"></script>
+<script src="js/annotation.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
